@@ -1,0 +1,191 @@
+
+<div class="slide" data-transition="none"><div class="content" ref="./presentation/1">
+<h2>Loading the proper javascript for a specific page</h2>
+
+<h1>Page specific Javascript</h1>
+
+<h3>Rafa Cardoso</h3></div>
+</div><div class="slide" data-transition="none"><div class="content" ref="./presentation/2">
+<h2>github.com/rafamvc</h2>
+
+<h2>r@rafa.ca</h2>
+
+<h2>@idontusetwetter</h2></div>
+</div><div class="slide" data-transition="none"><div class="content commandline incremental" ref="./presentation/3">
+<h2>Lets create some app that needs page specific javascript</h2>
+
+<pre><code><code class="command">$ rails new CoolProject</code>
+<code class="result">
+</code><code class="command">$ rails generate scaffold client name:string address:string</code>
+<code class="result">
+</code><code class="command">$ rails generate scaffold product name:string price:integer</code>
+</code></pre></div>
+</div><div class="slide" data-transition="turnUp"><div class="content center" ref="./presentation/4">
+<p><img src="/image/./page_specific.jpg" alt="page_specific"/></p></div>
+</div><div class="slide" data-transition="turnUp"><div class="content center" ref="./presentation/5">
+<p><img src="/image/./chuck_testa.jpg" alt="chuck_testa"/></p>
+
+<!-- Part 1 -->
+
+
+</div>
+</div><div class="slide" data-transition="none"><div class="content small" ref="./presentation/6">
+<h2>product.js:</h2>
+
+<pre class="sh_javascript"><code>
+COOLPROJECT.product = {
+  init: function() {
+    alert('product page js only'); 
+  }
+}</code></pre>
+
+<h2>application.html.erb:</h2>
+
+<pre class="sh_html"><code>&lt;html&gt;
+&lt;body data-controller="&lt;%=controller_name%&gt;" &gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre></div>
+</div><div class="slide" data-transition="none"><div class="content smaller" ref="./presentation/7">
+<h2>So, how do we load that javascript?</h2>
+
+<h3>Create a init.js, and put it into the asset pipeline</h3>
+
+<pre class="sh_javascript"><code>COOLPROJECT = {
+};
+
+UTIL = {
+  exec: function( controller ) {
+    var ns = COOLPROJECT;
+
+    if (controller !== "" &amp;&amp; ns[controller] //breaklinemagic
+            &amp;&amp; typeof ns[controller]['init'] == "function" ) {
+      ns[controller]['init']();
+    }
+  },
+
+  init: function() {
+    var body = document.body,
+        controller = body.getAttribute( "data-controller" );
+    UTIL.exec( controller );
+  }
+};
+$( document ).ready( UTIL.init );</code></pre>
+
+<!-- Part 2 -->
+
+
+</div>
+</div><div class="slide" data-transition="none"><div class="content small" ref="./presentation/8">
+<h2>product.js:</h2>
+
+<pre class="sh_javascript"><code>
+COOLPROJECT.products = {
+  init: function() {
+    alert('every product page');
+  },
+  index: function() {
+    alert('only at index');
+  },
+  edit: function() {
+    alert('only at edit');
+  }
+}</code></pre>
+
+<h2>application.html.erb:</h2>
+
+<pre class="sh_html"><code>&lt;html&gt;
+&lt;body   data-controller="&lt;%=controller_name%&gt;" 
+        data-action="&lt;%=action_name%&gt;"&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre></div>
+</div><div class="slide" data-transition="none"><div class="content smaller" ref="./presentation/9">
+<h2>So, how do we load that javascript per action?</h2>
+
+<h3>Simple! Copy and paste this code!</h3>
+
+<pre class="sh_javascript"><code>COOLPROJECT = {
+};
+UTIL = {
+  exec: function( controller, action ) {
+    var ns = COOLPROJECT,
+        action = ( action === undefined ) ? "init" : action;
+
+    if ( controller !== "" &amp;&amp; ns[controller] //breaklinemagic
+            &amp;&amp; typeof ns[controller][action] == "function" ) {
+      ns[controller][action]();
+    }
+  },
+
+  init: function() {
+    var body = document.body,
+        controller = body.getAttribute( "data-controller" ),
+        action = body.getAttribute( "data-action" );
+
+    UTIL.exec( controller );
+    UTIL.exec( controller, action );
+  }
+};
+
+$( document ).ready( UTIL.init );</code></pre></div>
+</div><div class="slide" data-transition="turnUp"><div class="content center" ref="./presentation/10">
+<p>I didn't create it:</p>
+
+<p>Paul Irish did, and Jason Garber extended it.</p>
+
+<p><a href="http://viget.com/inspire/extending-paul-irishs-comprehensive-dom-ready-execution">http://viget.com/inspire/extending-paul-irishs-comprehensive-dom-ready-execution</a></p>
+
+<p>It is also known as DOM-based Routing.</p></div>
+</div><div class="slide" data-transition="turnUp"><div class="content center" ref="./presentation/11">
+<h2>Well, while we are at it,</h2>
+
+<h1>what about the CSS per action/controller?</h1></div>
+</div><div class="slide" data-transition="turnUp"><div class="content small" ref="./presentation/12">
+<p>application.html.erb</p>
+
+<pre class="sh_html"><code>&lt;html&gt;
+&lt;body   data-controller="&lt;%=controller_name%&gt;" 
+        data-action="&lt;%=action_name%&gt;"
+        class="&lt;%=controller_name%&gt;"&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+<p>projects.scss</p>
+
+<pre class="sh_css"><code>    .projects {
+        input { 
+            color: red;
+        }
+    }</code></pre>
+
+<h3>I got this idea from Ben Hughes. Thanks Ben!</h3></div>
+</div><div class="slide" data-transition="turnUp"><div class="content" ref="./presentation/13">
+<h1>Q &amp; A</h1>
+
+<h2>Is that useful? Should I make it a gem?</h2>
+
+<pre class="sh_ruby"><code>source 'https://rubygems.org'
+
+gem 'rails', '3.2.2'
+gem 'init.js'</code></pre></div>
+</div><div class="slide" data-transition="turnUp"><div class="content center" ref="./presentation/14">
+<h1>Bootstrap with rails</h1></div>
+</div><div class="slide" data-transition="turnUp"><div class="content" ref="./presentation/15">
+<h1>The easy way</h1>
+
+<p>  Add bootstrap-generators to your gem</p>
+
+<pre class="sh_ruby"><code>source 'https://rubygems.org'
+
+gem 'rails', '3.2.2'
+gem 'simple_form', '~&gt; 2.0'
+gem 'bootstrap-generators'
+
+$ rails generate bootstrap:install 
+    --form_builder=simple_form</code></pre></div>
+</div><div class="slide" data-transition="turnUp"><div class="content" ref="./presentation/16">
+<h1>The other easy way</h1>
+
+<p>Download bootstrap.zip and install it manually.</p></div>
+</div><div class="slide" data-transition="turnUp"><div class="content" ref="./presentation/17">
+<h1>Q &amp; A</h1></div>
+</div>
