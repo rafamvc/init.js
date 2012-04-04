@@ -21,9 +21,9 @@
 </code><code class="command">$ rails generate scaffold product name:string price:integer</code>
 </code></pre></div>
 </div><div class="slide" data-transition="turnUp"><div class="content center" ref="./presentation/4">
-<p><img src="/image/./page_specific.jpg" alt="page_specific"/></p></div>
+<p><img src="image/./page_specific.jpg" alt="page_specific"/></p></div>
 </div><div class="slide" data-transition="turnUp"><div class="content center" ref="./presentation/5">
-<p><img src="/image/./chuck_testa.jpg" alt="chuck_testa"/></p>
+<p><img src="image/./chuck_testa.jpg" alt="chuck_testa"/></p>
 
 <!-- Part 1 -->
 
