@@ -28,6 +28,8 @@ function setupPreso(load_slides, prefix) {
 	}
 	preso_started = true
 
+
+        // Load slides fetches images
 	loadSlidesBool = load_slides
 	loadSlidesPrefix = prefix
 	loadSlides(loadSlidesBool, loadSlidesPrefix)
@@ -40,12 +42,17 @@ function setupPreso(load_slides, prefix) {
 	/* window.onresize	= resized; */
 	/* window.onscroll = scrolled; */
 	/* window.onunload = unloaded; */
+
+	$('body').addSwipeEvents().
+		bind('tap', swipeLeft).         // next
+		bind('swipeleft', swipeLeft).   // next
+		bind('swiperight', swipeRight); // prev
 }
 
 function loadSlides(load_slides, prefix) {
 	//load slides offscreen, wait for images and then initialize
 	if (load_slides) {
-		$("#slides").load("slides", false, function(){
+		$("#slides").load(loadSlidesPrefix + "slides", false, function(){
 			$("#slides img").batchImageLoad({
 			loadingCompleteCallback: initializePresentation(prefix)
 		})
@@ -59,7 +66,7 @@ function loadSlides(load_slides, prefix) {
 
 function initializePresentation(prefix) {
 	// unhide for height to work in static mode
-  $("#slides").show();
+        $("#slides").show();
 
 	//center slides offscreen
 	centerSlides($('#slides > .slide'))
@@ -85,8 +92,12 @@ function initializePresentation(prefix) {
 		slidesLoaded = true
 	}
 	setupSlideParamsCheck();
-	sh_highlightDocument(prefix+'/js/sh_lang/', '.min.js')
-	$(".preso").trigger("showoff:loaded");
+        try {
+	    sh_highlightDocument(prefix+'/js/sh_lang/', '.min.js')
+	} catch(e) {
+	    sh_highlightDocument();
+	}
+	$("#preso").trigger("showoff:loaded");
 }
 
 function centerSlides(slides) {
@@ -96,7 +107,7 @@ function centerSlides(slides) {
 }
 
 function centerSlide(slide) {
-	var slide_content = $(slide).children(".content").first()
+	var slide_content = $(slide).find(".content").first()
 	var height = slide_content.height()
 	var mar_top = (0.5 * parseFloat($(slide).height())) - (0.5 * parseFloat(height))
 	if (mar_top < 0) {
@@ -112,7 +123,7 @@ function setupMenu() {
 	var menu = new ListMenu()
 
 	slides.each(function(s, elem) {
-		content = $(elem).children(".content")
+		content = $(elem).find(".content")
 		shortTxt = $(content).text().substr(0, 20)
 		path = $(content).attr('ref').split('/')
 		currSlide += 1
@@ -190,6 +201,8 @@ function showSlide(back_step) {
 	if (fullPage) {
 		$('#preso').css({'width' : '100%', 'overflow' : 'visible'});
 		currentSlide.css({'width' : '100%', 'text-align' : 'center', 'overflow' : 'visible'});
+	} else {
+		$('#preso').css({'width' : '', 'overflow' : ''});
 	}
 
 	percent = getSlidePercent()
@@ -204,14 +217,25 @@ function showSlide(back_step) {
 		incrSteps = 0
 	}
 	location.hash = slidenum + 1;
-	$('body').addSwipeEvents().
-		bind('swipeleft',	swipeLeft).
-		bind('swiperight', swipeRight)
-	removeResults()
 
-	$(currentSlide).find(".content").trigger("showoff:show");
+	removeResults();
 
-	return getCurrentNotes()
+  var currentContent = $(currentSlide).find(".content")
+	currentContent.trigger("showoff:show");
+
+	var ret = getCurrentNotes();
+
+  // Update presenter view, if we spawned one
+	if ('presenterView' in window) {
+    var pv = window.presenterView;
+		pv.slidenum = slidenum;
+    pv.incrCurr = incrCurr
+    pv.incrSteps = incrSteps
+		pv.showSlide(true);
+		pv.postSlide();
+	}
+
+	return ret;
 }
 
 function getSlideProgress()
@@ -223,7 +247,7 @@ function getCurrentNotes()
 {
   var notes = currentSlide.find("p.notes").text()
   $('#notesInfo').text(notes)
-	return notes 
+	return notes
 }
 
 function getSlidePercent()
@@ -244,8 +268,18 @@ function determineIncremental()
 		incrCode = true
 	}
 	incrElem.each(function(s, elem) {
-		$(elem).hide()
+		$(elem).css('visibility', 'hidden');
 	})
+}
+
+function showIncremental(incr)
+{
+		elem = incrElem.eq(incrCurr)
+		if (incrCode && elem.hasClass('command')) {
+			incrElem.eq(incrCurr).css('visibility', 'visible').jTypeWriter({duration:1.0})
+		} else {
+			incrElem.eq(incrCurr).css('visibility', 'visible')
+		}
 }
 
 function prevStep()
@@ -273,13 +307,12 @@ function nextStep()
 		slidenum++
 		return showSlide()
 	} else {
-		elem = incrElem.eq(incrCurr)
-		if (incrCode && elem.hasClass('command')) {
-			incrElem.eq(incrCurr).show().jTypeWriter({duration:1.0})
-		} else {
-			incrElem.eq(incrCurr).show()
-		}
-		incrCurr++
+		showIncremental(incrCurr);
+		var incrEvent = jQuery.Event("showoff:incr");
+		incrEvent.slidenum = slidenum;
+		incrEvent.incr = incrCurr;
+		$(currentSlide).find(".content").trigger(incrEvent);
+		incrCurr++;
 	}
 }
 
@@ -305,6 +338,22 @@ function toggleNotes()
 	}
 }
 
+function executeAnyCode()
+{
+  var $jsCode = $('.execute .sh_javascript code:visible')
+  if ($jsCode.length > 0) {
+      executeCode.call($jsCode);
+  }
+  var $rubyCode = $('.execute .sh_ruby code:visible')
+  if ($rubyCode.length > 0) {
+      executeRuby.call($rubyCode);
+  }
+  var $coffeeCode = $('.execute .sh_coffeescript code:visible')
+  if ($coffeeCode.length > 0) {
+      executeCoffee.call($coffeeCode);
+  } 
+}
+
 function debug(data)
 {
 	$('#debugInfo').text(data)
@@ -326,7 +375,7 @@ function keyDown(event)
 		return true;
 	}
 
-	if (key == 13){
+	if (key == 13) {
 		if (gotoSlidenum > 0) {
 			debug('go to ' + gotoSlidenum);
 			slidenum = gotoSlidenum - 1;
@@ -334,9 +383,8 @@ function keyDown(event)
 			gotoSlidenum = 0;
 		} else {
 			debug('executeCode');
-			executeCode.call($('.sh_javaScript code:visible'));
+			executeAnyCode();
 		}
-
 	}
 
 
@@ -344,10 +392,14 @@ function keyDown(event)
 	{
 		shiftKeyActive = true;
 	}
+
 	if (key == 32) // space bar
 	{
-		if (shiftKeyActive) { prevStep() }
-		else				{ nextStep() }
+		if (shiftKeyActive) {
+			prevStep()
+		} else {
+			nextStep()
+		}
 	}
 	else if (key == 68) // 'd' for debug
 	{
@@ -373,7 +425,7 @@ function keyDown(event)
 	{
 		$('#navmenu').toggle().trigger('click')
 	}
-	else if (key == 90) // z for help
+	else if (key == 90 || key == 191) // z or ? for help
 	{
 		$('#help').toggle()
 	}
@@ -389,9 +441,14 @@ function keyDown(event)
 	{
 		removeResults();
 	}
-	else if (key == 80) // 'p' for preshow
+	else if (key == 80) // 'p' for preshow, 'P' for pause
 	{
-		runPreShow();
+    if (shiftKeyActive) {
+      togglePause();
+    }
+    else {
+      togglePreShow();
+    }
 	}
 	return true
 }
@@ -410,13 +467,12 @@ function keyUp(event) {
 	}
 }
 
-
 function swipeLeft() {
-	nextStep()
+  nextStep();
 }
 
 function swipeRight() {
-	prevStep()
+  prevStep();
 }
 
 function ListMenu(s)
@@ -483,8 +539,29 @@ function executeCode () {
 	setTimeout(function() { codeDiv.removeClass("executing");}, 250 );
 	if (result != null) print(result);
 }
-$('.sh_javaScript code').live("click", executeCode);
+$('.execute .sh_javascript code').live("click", executeCode);
 
+function executeRuby () {
+	var codeDiv = $(this);
+	codeDiv.addClass("executing");
+    $.get('/eval_ruby', {code: codeDiv.text()}, function(result) {
+        if (result != null) print(result);
+        codeDiv.removeClass("executing");
+    });
+}
+$('.execute .sh_ruby code').live("click", executeRuby);
+
+function executeCoffee() {
+	result = null;
+	var codeDiv = $(this);
+	codeDiv.addClass("executing");
+  // Coffeescript encapsulates everything, so result must be attached to window.
+  var code = codeDiv.text() + ';window.result=result;'
+	eval(CoffeeScript.compile(code));
+	setTimeout(function() { codeDiv.removeClass("executing");}, 250 );
+	if (result != null) print(result);
+}
+$('.execute .sh_coffeescript code').live("click", executeCoffee);
 
 /********************
  PreShow Code
@@ -498,9 +575,9 @@ var preshow_timerRunning = false;
 var preshow_current = 0;
 var preshow_images;
 var preshow_imagesTotal = 0;
-var preshow_des;
+var preshow_des = null;
 
-function runPreShow() {
+function togglePreShow() {
 	if(preshow_running) {
 		stopPreShow()
 	} else {
@@ -554,7 +631,7 @@ function startPreShow() {
 function addPreShowTips() {
 	time = secondsToTime(preshow_secondsLeft)
 	$('#preshow_timer').text(time + ' to go-time')
-	var des = preshow_des[tmpImg.attr("ref")]
+	var des = preshow_des && preshow_des[tmpImg.attr("ref")]
 	if(des) {
 		$('#tips').show()
 		$('#tips').text(des)
@@ -598,3 +675,7 @@ function nextPreShowImage() {
 /********************
  End PreShow Code
  ********************/
+
+function togglePause() {
+  $("#pauseScreen").toggle();
+}
