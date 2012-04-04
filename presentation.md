@@ -188,3 +188,32 @@ projects.scss
 	gem 'rails', '3.2.2'
 	gem 'init.js'
 
+!SLIDE center transition=turnUp
+
+# Bootstrap with rails #
+
+!SLIDE transition=turnUp
+
+# The easy way #
+  
+  Add bootstrap-generators to your gem
+
+	@@@ ruby
+	source 'https://rubygems.org'
+
+	gem 'rails', '3.2.2'
+	gem 'simple_form', '~> 2.0'
+	gem 'bootstrap-generators'
+
+	$ rails generate bootstrap:install 
+		--form_builder=simple_form
+
+!SLIDE transition=turnUp
+
+# The other easy way #
+
+Download bootstrap.zip and install it manually.
+
+!SLIDE transition=turnUp
+
+# Q & A #
